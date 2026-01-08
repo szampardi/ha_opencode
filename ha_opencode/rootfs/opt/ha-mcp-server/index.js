@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Home Assistant MCP Server for OpenCode (Enhanced Edition v2.1)
+ * Home Assistant MCP Server for OpenCode (Documentation Edition v2.2)
  * 
  * A cutting-edge MCP server providing deep integration with Home Assistant.
  * Implements the latest MCP specification (2025-06-18) features:
@@ -11,13 +11,17 @@
  * - Resource links in tool results
  * - Logging capability for debugging
  * - Content annotations (audience/priority)
+ * - Live documentation fetching
+ * - Breaking changes awareness
+ * - Deprecation pattern detection
  * 
- * TOOLS (19):
+ * TOOLS (22):
  * - Entity state management (get, search, history)
  * - Service calls with intelligent targeting
  * - Configuration validation and management
  * - Calendar, logbook, and history access
  * - Anomaly detection and suggestions
+ * - Documentation fetching and syntax checking
  * 
  * RESOURCES (9 + 4 templates):
  * - Live entity states by domain
@@ -50,6 +54,11 @@ import {
 
 const SUPERVISOR_API = "http://supervisor/core/api";
 const SUPERVISOR_TOKEN = process.env.SUPERVISOR_TOKEN;
+
+// Home Assistant documentation base URLs
+const HA_DOCS_BASE = "https://www.home-assistant.io";
+const HA_INTEGRATIONS_URL = `${HA_DOCS_BASE}/integrations`;
+const HA_BLOG_URL = `${HA_DOCS_BASE}/blog`;
 
 if (!SUPERVISOR_TOKEN) {
   console.error("Error: SUPERVISOR_TOKEN environment variable is required");
@@ -283,6 +292,61 @@ const SCHEMAS = {
       errors: { type: "string" },
     },
     required: ["result"],
+  },
+  
+  integrationDocs: {
+    type: "object",
+    properties: {
+      integration: { type: "string", description: "Integration name" },
+      url: { type: "string", description: "Documentation URL" },
+      title: { type: "string", description: "Integration title" },
+      description: { type: "string", description: "Integration description" },
+      configuration: { type: "string", description: "Configuration section content" },
+      ha_version: { type: "string", description: "Current HA version" },
+      fetched_at: { type: "string", description: "Timestamp when docs were fetched" },
+    },
+    required: ["integration", "url"],
+  },
+  
+  breakingChanges: {
+    type: "object",
+    properties: {
+      ha_version: { type: "string", description: "Current Home Assistant version" },
+      changes: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            version: { type: "string" },
+            title: { type: "string" },
+            description: { type: "string" },
+            integration: { type: "string" },
+            url: { type: "string" },
+          },
+        },
+      },
+    },
+    required: ["ha_version", "changes"],
+  },
+  
+  configSyntaxCheck: {
+    type: "object",
+    properties: {
+      valid: { type: "boolean", description: "Whether the syntax appears valid" },
+      deprecated: { type: "boolean", description: "Whether deprecated syntax was detected" },
+      warnings: { 
+        type: "array", 
+        items: { type: "string" },
+        description: "List of warnings about the configuration" 
+      },
+      suggestions: { 
+        type: "array", 
+        items: { type: "string" },
+        description: "Suggestions for improving the configuration" 
+      },
+      docs_url: { type: "string", description: "URL to relevant documentation" },
+    },
+    required: ["valid", "deprecated", "warnings", "suggestions"],
   },
   
   area: {
@@ -581,6 +645,255 @@ function generateSuggestions(states) {
 }
 
 // ============================================================================
+// DOCUMENTATION FETCHING HELPERS
+// ============================================================================
+
+/**
+ * Fetch a URL and return its text content
+ */
+async function fetchUrl(url) {
+  sendLog("debug", "docs", { action: "fetch", url });
+  
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "HomeAssistant-MCP-Server/2.1.0",
+        "Accept": "text/html,application/xhtml+xml,text/plain",
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    return await response.text();
+  } catch (error) {
+    sendLog("error", "docs", { action: "fetch_error", url, error: error.message });
+    throw error;
+  }
+}
+
+/**
+ * Extract meaningful content from HTML (basic extraction)
+ */
+function extractContentFromHtml(html) {
+  // Remove script and style tags
+  let content = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "");
+  content = content.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "");
+  content = content.replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, "");
+  content = content.replace(/<header[^>]*>[\s\S]*?<\/header>/gi, "");
+  content = content.replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, "");
+  
+  // Extract title
+  const titleMatch = content.match(/<title[^>]*>([^<]+)<\/title>/i);
+  const title = titleMatch ? titleMatch[1].trim() : "";
+  
+  // Extract meta description
+  const descMatch = content.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i);
+  const description = descMatch ? descMatch[1].trim() : "";
+  
+  // Try to find the main content area
+  let mainContent = "";
+  
+  // Look for article or main content
+  const articleMatch = content.match(/<article[^>]*>([\s\S]*?)<\/article>/i);
+  const mainMatch = content.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
+  const contentMatch = content.match(/<div[^>]*class="[^"]*content[^"]*"[^>]*>([\s\S]*?)<\/div>/i);
+  
+  if (articleMatch) {
+    mainContent = articleMatch[1];
+  } else if (mainMatch) {
+    mainContent = mainMatch[1];
+  } else if (contentMatch) {
+    mainContent = contentMatch[1];
+  } else {
+    // Fall back to body
+    const bodyMatch = content.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    mainContent = bodyMatch ? bodyMatch[1] : content;
+  }
+  
+  // Convert common HTML to text/markdown
+  mainContent = mainContent
+    // Code blocks
+    .replace(/<pre[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/gi, "\n```\n$1\n```\n")
+    .replace(/<code[^>]*>([^<]+)<\/code>/gi, "`$1`")
+    // Headings
+    .replace(/<h1[^>]*>([^<]+)<\/h1>/gi, "\n# $1\n")
+    .replace(/<h2[^>]*>([^<]+)<\/h2>/gi, "\n## $1\n")
+    .replace(/<h3[^>]*>([^<]+)<\/h3>/gi, "\n### $1\n")
+    .replace(/<h4[^>]*>([^<]+)<\/h4>/gi, "\n#### $1\n")
+    // Lists
+    .replace(/<li[^>]*>/gi, "- ")
+    .replace(/<\/li>/gi, "\n")
+    // Paragraphs and breaks
+    .replace(/<p[^>]*>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    // Links - keep the text
+    .replace(/<a[^>]*>([^<]+)<\/a>/gi, "$1")
+    // Bold/strong
+    .replace(/<strong[^>]*>([^<]+)<\/strong>/gi, "**$1**")
+    .replace(/<b[^>]*>([^<]+)<\/b>/gi, "**$1**")
+    // Italic/em
+    .replace(/<em[^>]*>([^<]+)<\/em>/gi, "*$1*")
+    .replace(/<i[^>]*>([^<]+)<\/i>/gi, "*$1*")
+    // Remove remaining tags
+    .replace(/<[^>]+>/g, "")
+    // Decode common entities
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    // Clean up whitespace
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  
+  return { title, description, content: mainContent };
+}
+
+/**
+ * Extract configuration section from documentation
+ */
+function extractConfigurationSection(content) {
+  // Look for configuration-related sections
+  const configPatterns = [
+    /## Configuration[\s\S]*?(?=\n## |$)/i,
+    /## YAML Configuration[\s\S]*?(?=\n## |$)/i,
+    /### Configuration Variables[\s\S]*?(?=\n### |\n## |$)/i,
+    /## Setup[\s\S]*?(?=\n## |$)/i,
+  ];
+  
+  for (const pattern of configPatterns) {
+    const match = content.match(pattern);
+    if (match) {
+      return match[0].trim();
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Extract YAML examples from content
+ */
+function extractYamlExamples(content) {
+  const examples = [];
+  const codeBlockRegex = /```(?:yaml|YAML)?\n([\s\S]*?)```/g;
+  
+  let match;
+  while ((match = codeBlockRegex.exec(content)) !== null) {
+    examples.push(match[1].trim());
+  }
+  
+  return examples;
+}
+
+/**
+ * Known deprecation patterns for common configurations
+ */
+const DEPRECATION_PATTERNS = [
+  {
+    pattern: /^sensor:\s*\n\s*-?\s*platform:\s*template/m,
+    message: "Legacy template sensor syntax detected. Use top-level 'template:' key instead.",
+    suggestion: "template:\n  - sensor:\n      - name: \"My Sensor\"\n        state: \"{{ states('...') }}\"",
+    integration: "template",
+    deprecated_in: "2024.1",
+  },
+  {
+    pattern: /^binary_sensor:\s*\n\s*-?\s*platform:\s*template/m,
+    message: "Legacy template binary_sensor syntax detected. Use top-level 'template:' key instead.",
+    suggestion: "template:\n  - binary_sensor:\n      - name: \"My Sensor\"\n        state: \"{{ is_state('...', 'on') }}\"",
+    integration: "template",
+    deprecated_in: "2024.1",
+  },
+  {
+    pattern: /entity_namespace:/m,
+    message: "'entity_namespace' is deprecated. Use 'unique_id' for entity identification instead.",
+    suggestion: "Remove entity_namespace and add unique_id to each entity.",
+    deprecated_in: "2023.8",
+  },
+  {
+    pattern: /^\s*-\s*platform:\s*time_date/m,
+    message: "The time_date sensor platform is deprecated.",
+    suggestion: "Use template sensors with now() or built-in date/time entities.",
+    integration: "time_date",
+    deprecated_in: "2024.6",
+  },
+  {
+    pattern: /automation:\s*\n\s*-?\s*alias:/m,
+    message: "Consider using automation ID for better organization.",
+    suggestion: "Add 'id: unique_automation_id' to enable UI editing and better tracking.",
+    severity: "info",
+  },
+  {
+    pattern: /device_tracker:\s*\n\s*-?\s*platform:\s*(?:nmap|netgear|ping)/m,
+    message: "Legacy device tracker platforms may have limited functionality.",
+    suggestion: "Consider using the device_tracker integration with the UI for better device tracking.",
+    severity: "info",
+  },
+  {
+    pattern: /cover:\s*\n\s*-?\s*platform:\s*template/m,
+    message: "Legacy template cover syntax detected. Use top-level 'template:' key instead.",
+    suggestion: "template:\n  - cover:\n      - name: \"My Cover\"\n        state: \"{{ ... }}\"",
+    integration: "template",
+    deprecated_in: "2024.1",
+  },
+  {
+    pattern: /switch:\s*\n\s*-?\s*platform:\s*template/m,
+    message: "Legacy template switch syntax detected. Consider using top-level 'template:' key.",
+    suggestion: "template:\n  - switch:\n      - name: \"My Switch\"\n        state: \"{{ ... }}\"",
+    integration: "template",
+    deprecated_in: "2024.4",
+  },
+  {
+    pattern: /homeassistant:\s*\n\s*customize:/m,
+    message: "Entity customizations in configuration.yaml work but UI customizations are preferred.",
+    suggestion: "Consider using the UI (Settings -> Devices & Services -> Entities) for customizations.",
+    severity: "info",
+  },
+  {
+    pattern: /^\s*white_value:/m,
+    message: "'white_value' is deprecated in light services.",
+    suggestion: "Use 'white' instead of 'white_value' in light service calls.",
+    deprecated_in: "2023.3",
+  },
+];
+
+/**
+ * Check YAML configuration for deprecated patterns
+ */
+function checkConfigForDeprecations(yamlConfig, integration = null) {
+  const warnings = [];
+  const suggestions = [];
+  let deprecated = false;
+  
+  for (const pattern of DEPRECATION_PATTERNS) {
+    // Skip patterns not relevant to the specified integration
+    if (integration && pattern.integration && pattern.integration !== integration) {
+      continue;
+    }
+    
+    if (pattern.pattern.test(yamlConfig)) {
+      deprecated = deprecated || pattern.deprecated_in !== undefined;
+      
+      const severity = pattern.severity || (pattern.deprecated_in ? "warning" : "info");
+      const warning = pattern.deprecated_in 
+        ? `[DEPRECATED since ${pattern.deprecated_in}] ${pattern.message}`
+        : `[INFO] ${pattern.message}`;
+      
+      warnings.push(warning);
+      if (pattern.suggestion) {
+        suggestions.push(pattern.suggestion);
+      }
+    }
+  }
+  
+  return { deprecated, warnings, suggestions };
+}
+
+// ============================================================================
 // HELPER: Create annotated content
 // ============================================================================
 
@@ -617,7 +930,7 @@ function createResourceLink(uri, name, description, options = {}) {
 const server = new Server(
   {
     name: "home-assistant",
-    version: "2.1.0",
+    version: "2.2.0",
   },
   {
     capabilities: {
@@ -988,6 +1301,80 @@ const TOOLS = [
       required: ["entity_id"],
     },
     outputSchema: SCHEMAS.diagnostics,
+    annotations: {
+      readOnly: true,
+      idempotent: true,
+    },
+  },
+  
+  // === DOCUMENTATION ===
+  {
+    name: "get_integration_docs",
+    title: "Get Integration Documentation",
+    description: "Fetch current documentation for a Home Assistant integration. Use this BEFORE writing configuration to ensure you use the latest syntax. Returns configuration examples, setup instructions, and deprecation notices.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        integration: {
+          type: "string",
+          description: "Integration name (e.g., 'template', 'mqtt', 'rest', 'sensor', 'automation')",
+        },
+        section: {
+          type: "string",
+          enum: ["all", "configuration", "examples"],
+          description: "Which section to focus on (default: 'configuration')",
+        },
+      },
+      required: ["integration"],
+    },
+    outputSchema: SCHEMAS.integrationDocs,
+    annotations: {
+      readOnly: true,
+      idempotent: true,
+    },
+  },
+  {
+    name: "get_breaking_changes",
+    title: "Get Breaking Changes",
+    description: "Fetch recent breaking changes from Home Assistant release notes. Use this when troubleshooting configurations that stopped working after an update, or to check compatibility before suggesting configurations.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        integration: {
+          type: "string",
+          description: "Filter by specific integration name (optional)",
+        },
+        version: {
+          type: "string",
+          description: "Get changes for a specific HA version (e.g., '2024.12'). Defaults to recent versions.",
+        },
+      },
+    },
+    outputSchema: SCHEMAS.breakingChanges,
+    annotations: {
+      readOnly: true,
+      idempotent: true,
+    },
+  },
+  {
+    name: "check_config_syntax",
+    title: "Check Configuration Syntax",
+    description: "Analyze YAML configuration for deprecated syntax patterns and suggest modern alternatives. Use this to validate configuration before presenting it to the user.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        yaml_config: {
+          type: "string",
+          description: "The YAML configuration to check",
+        },
+        integration: {
+          type: "string",
+          description: "The integration this config is for (helps with specific checks)",
+        },
+      },
+      required: ["yaml_config"],
+    },
+    outputSchema: SCHEMAS.configSyntaxCheck,
     annotations: {
       readOnly: true,
       idempotent: true,
@@ -1516,6 +1903,311 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         });
       }
 
+      // === DOCUMENTATION ===
+      case "get_integration_docs": {
+        const { integration, section = "configuration" } = args;
+        sendLog("info", "docs", { action: "get_integration_docs", integration, section });
+        
+        const url = `${HA_INTEGRATIONS_URL}/${integration}/`;
+        let haVersion = "unknown";
+        
+        // Get current HA version
+        try {
+          const config = await callHA("/config");
+          haVersion = config.version || "unknown";
+        } catch (e) {
+          sendLog("warning", "docs", { action: "version_fetch_failed", error: e.message });
+        }
+        
+        try {
+          const html = await fetchUrl(url);
+          const { title, description, content } = extractContentFromHtml(html);
+          
+          let resultContent = content;
+          const examples = extractYamlExamples(content);
+          
+          // Filter to configuration section if requested
+          if (section === "configuration") {
+            const configSection = extractConfigurationSection(content);
+            if (configSection) {
+              resultContent = configSection;
+            }
+          } else if (section === "examples" && examples.length > 0) {
+            resultContent = "## YAML Examples\n\n" + examples.map((ex, i) => `### Example ${i + 1}\n\`\`\`yaml\n${ex}\n\`\`\``).join("\n\n");
+          }
+          
+          const result = {
+            integration,
+            url,
+            title: title || integration,
+            description: description || "",
+            ha_version: haVersion,
+            fetched_at: new Date().toISOString(),
+            content: resultContent.substring(0, 15000), // Limit content size
+            yaml_examples: examples.slice(0, 5), // Include up to 5 examples
+          };
+          
+          return makeCompatibleResponse({
+            content: [
+              createTextContent(
+                `# ${result.title}\n\n` +
+                `**Integration:** ${integration}\n` +
+                `**Docs URL:** ${url}\n` +
+                `**Your HA Version:** ${haVersion}\n` +
+                `**Fetched:** ${result.fetched_at}\n\n` +
+                `---\n\n${resultContent.substring(0, 15000)}`,
+                { audience: ["assistant"], priority: 0.9 }
+              ),
+            ],
+          });
+        } catch (error) {
+          // Provide helpful fallback if docs can't be fetched
+          return makeCompatibleResponse({
+            content: [
+              createTextContent(
+                `Unable to fetch documentation for '${integration}'.\n\n` +
+                `**Docs URL:** ${url}\n` +
+                `**Error:** ${error.message}\n\n` +
+                `**Suggestion:** You can:\n` +
+                `1. Try visiting the URL directly: ${url}\n` +
+                `2. Check if the integration name is correct\n` +
+                `3. Use \`validate_config\` to check your configuration\n\n` +
+                `**Your HA Version:** ${haVersion}`,
+                { audience: ["assistant"], priority: 0.8 }
+              ),
+            ],
+          });
+        }
+      }
+
+      case "get_breaking_changes": {
+        const { integration, version } = args;
+        sendLog("info", "docs", { action: "get_breaking_changes", integration, version });
+        
+        let haVersion = "unknown";
+        try {
+          const config = await callHA("/config");
+          haVersion = config.version || "unknown";
+        } catch (e) {
+          sendLog("warning", "docs", { action: "version_fetch_failed", error: e.message });
+        }
+        
+        // Build a list of known breaking changes (curated, since parsing release notes is complex)
+        // This provides immediate value without complex web scraping
+        const knownBreakingChanges = [
+          {
+            version: "2024.12",
+            title: "Template sensor/binary_sensor syntax change",
+            description: "Legacy 'platform: template' under sensor/binary_sensor is deprecated. Use top-level 'template:' key.",
+            integration: "template",
+            url: "https://www.home-assistant.io/integrations/template/",
+          },
+          {
+            version: "2024.11",
+            title: "MQTT discovery changes",
+            description: "MQTT discovery payload format updated for better device support.",
+            integration: "mqtt",
+            url: "https://www.home-assistant.io/integrations/mqtt/",
+          },
+          {
+            version: "2024.10",
+            title: "REST sensor authentication",
+            description: "REST sensors now support digest authentication; some configurations may need updating.",
+            integration: "rest",
+            url: "https://www.home-assistant.io/integrations/rest/",
+          },
+          {
+            version: "2024.8",
+            title: "Automation trigger variables",
+            description: "Trigger variables are now more strictly typed in automations.",
+            integration: "automation",
+            url: "https://www.home-assistant.io/docs/automation/trigger/",
+          },
+          {
+            version: "2024.6",
+            title: "Time & Date sensor deprecation",
+            description: "The time_date platform is deprecated. Use template sensors with now() instead.",
+            integration: "time_date",
+            url: "https://www.home-assistant.io/integrations/time_date/",
+          },
+          {
+            version: "2024.4",
+            title: "Template switch/cover/fan syntax",
+            description: "Template platforms for switch, cover, and fan can now use the top-level 'template:' key.",
+            integration: "template",
+            url: "https://www.home-assistant.io/integrations/template/",
+          },
+          {
+            version: "2024.1",
+            title: "Legacy template sensor syntax deprecated",
+            description: "The 'platform: template' syntax under sensor: is deprecated in favor of the template: integration.",
+            integration: "template",
+            url: "https://www.home-assistant.io/integrations/template/",
+          },
+          {
+            version: "2023.12",
+            title: "Entity naming convention changes",
+            description: "Entities now follow stricter naming conventions. Some entity IDs may have changed.",
+            integration: null,
+            url: "https://www.home-assistant.io/blog/2023/12/",
+          },
+          {
+            version: "2023.8",
+            title: "entity_namespace deprecated",
+            description: "The entity_namespace option is deprecated. Use unique_id instead.",
+            integration: null,
+            url: "https://www.home-assistant.io/blog/2023/08/",
+          },
+          {
+            version: "2023.3",
+            title: "white_value deprecated in light services",
+            description: "Use 'white' instead of 'white_value' in light service calls.",
+            integration: "light",
+            url: "https://www.home-assistant.io/integrations/light/",
+          },
+        ];
+        
+        // Filter by integration if specified
+        let filteredChanges = knownBreakingChanges;
+        if (integration) {
+          filteredChanges = knownBreakingChanges.filter(
+            c => c.integration === integration || c.integration === null
+          );
+        }
+        
+        // Filter by version if specified
+        if (version) {
+          filteredChanges = filteredChanges.filter(c => c.version === version);
+        }
+        
+        // Try to fetch the release notes page for additional context
+        let releaseNotesContent = "";
+        const targetVersion = version || haVersion.split(".").slice(0, 2).join(".");
+        
+        try {
+          const releaseUrl = `${HA_BLOG_URL}/${targetVersion.replace(".", "/")}/`;
+          const html = await fetchUrl(releaseUrl);
+          const { content } = extractContentFromHtml(html);
+          
+          // Extract breaking changes section if present
+          const breakingMatch = content.match(/breaking changes?[\s\S]*?(?=\n## |$)/i);
+          if (breakingMatch) {
+            releaseNotesContent = breakingMatch[0].substring(0, 5000);
+          }
+        } catch (e) {
+          sendLog("debug", "docs", { action: "release_notes_fetch_failed", error: e.message });
+        }
+        
+        const result = {
+          ha_version: haVersion,
+          queried_version: version || "recent",
+          queried_integration: integration || "all",
+          changes: filteredChanges,
+          release_notes_excerpt: releaseNotesContent || null,
+        };
+        
+        let responseText = `# Breaking Changes\n\n` +
+          `**Your HA Version:** ${haVersion}\n` +
+          `**Queried:** ${integration ? `integration '${integration}'` : "all integrations"}` +
+          `${version ? ` for version ${version}` : ""}\n\n`;
+        
+        if (filteredChanges.length > 0) {
+          responseText += `## Known Breaking Changes\n\n`;
+          for (const change of filteredChanges) {
+            responseText += `### ${change.version}: ${change.title}\n`;
+            responseText += `${change.description}\n`;
+            responseText += `**More info:** ${change.url}\n\n`;
+          }
+        } else {
+          responseText += `No specific breaking changes found for the query.\n\n`;
+        }
+        
+        if (releaseNotesContent) {
+          responseText += `## From Release Notes\n\n${releaseNotesContent}\n`;
+        }
+        
+        responseText += `\n---\n**Tip:** Always check ${HA_BLOG_URL}/categories/release-notes/ for the latest changes.`;
+        
+        return makeCompatibleResponse({
+          content: [createTextContent(responseText, { audience: ["assistant"], priority: 0.9 })],
+        });
+      }
+
+      case "check_config_syntax": {
+        const { yaml_config, integration } = args;
+        sendLog("info", "docs", { action: "check_config_syntax", integration });
+        
+        const { deprecated, warnings, suggestions } = checkConfigForDeprecations(yaml_config, integration);
+        
+        // Additional basic YAML validation hints
+        const additionalWarnings = [];
+        const additionalSuggestions = [];
+        
+        // Check for common YAML issues
+        if (yaml_config.includes("\t")) {
+          additionalWarnings.push("Tab characters detected. YAML requires spaces for indentation.");
+          additionalSuggestions.push("Replace all tabs with spaces (2 spaces per indent level is standard for Home Assistant).");
+        }
+        
+        if (!/^[a-z_]+:/m.test(yaml_config)) {
+          additionalWarnings.push("No top-level key detected. Configuration should start with a domain key.");
+        }
+        
+        // Check for common mistakes
+        if (/: \|$/m.test(yaml_config)) {
+          additionalSuggestions.push("Multi-line strings with '|' should have content on the following lines, indented.");
+        }
+        
+        if (/entity_id:.*,/m.test(yaml_config)) {
+          additionalSuggestions.push("Multiple entity_ids should be formatted as a YAML list, not comma-separated.");
+        }
+        
+        const allWarnings = [...warnings, ...additionalWarnings];
+        const allSuggestions = [...suggestions, ...additionalSuggestions];
+        
+        const docsUrl = integration 
+          ? `${HA_INTEGRATIONS_URL}/${integration}/`
+          : "https://www.home-assistant.io/docs/configuration/";
+        
+        const result = {
+          valid: allWarnings.filter(w => w.includes("DEPRECATED")).length === 0,
+          deprecated,
+          warnings: allWarnings,
+          suggestions: allSuggestions,
+          docs_url: docsUrl,
+        };
+        
+        let responseText = `# Configuration Syntax Check\n\n`;
+        responseText += `**Status:** ${result.valid ? "OK" : "Issues Found"}\n`;
+        responseText += `**Deprecated Syntax:** ${deprecated ? "Yes" : "No"}\n`;
+        responseText += `**Docs:** ${docsUrl}\n\n`;
+        
+        if (allWarnings.length > 0) {
+          responseText += `## Warnings\n\n`;
+          for (const warning of allWarnings) {
+            responseText += `- ${warning}\n`;
+          }
+          responseText += "\n";
+        }
+        
+        if (allSuggestions.length > 0) {
+          responseText += `## Suggestions\n\n`;
+          for (const suggestion of allSuggestions) {
+            responseText += `- ${suggestion}\n`;
+          }
+          responseText += "\n";
+        }
+        
+        if (allWarnings.length === 0 && allSuggestions.length === 0) {
+          responseText += "No issues detected in the configuration syntax.\n\n";
+          responseText += "**Note:** This is a basic syntax check. Use `validate_config` for full Home Assistant validation.\n";
+        }
+        
+        return makeCompatibleResponse({
+          content: [createTextContent(responseText, { audience: ["assistant"], priority: 0.9 })],
+        });
+      }
+
       default:
         throw new Error(`Unknown tool: ${name}`);
     }
@@ -1985,15 +2677,15 @@ async function main() {
   
   sendLog("info", "mcp-server", { 
     action: "started",
-    version: "2.1.0",
+    version: "2.2.0",
     tools: TOOLS.length,
     resources: RESOURCES.length,
     prompts: PROMPTS.length,
   });
   
-  console.error("Home Assistant MCP server v2.1.0 started (Cutting Edge Edition)");
+  console.error("Home Assistant MCP server v2.2.0 started (Documentation Edition)");
   console.error(`Capabilities: Tools (${TOOLS.length}), Resources (${RESOURCES.length}), Prompts (${PROMPTS.length}), Logging`);
-  console.error("Features: Structured Output, Tool Annotations, Resource Links, Content Annotations");
+  console.error("Features: Structured Output, Tool Annotations, Resource Links, Content Annotations, Live Docs");
 }
 
 main().catch((error) => {

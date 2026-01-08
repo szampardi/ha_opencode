@@ -1,4 +1,4 @@
-# Home Assistant MCP Server (Cutting Edge Edition v2.1)
+# Home Assistant MCP Server (Cutting Edge Edition v2.2)
 
 A comprehensive Model Context Protocol (MCP) server implementing the latest MCP specification (2025-06-18) for deep integration between OpenCode and Home Assistant.
 
@@ -6,10 +6,11 @@ A comprehensive Model Context Protocol (MCP) server implementing the latest MCP 
 
 | Category | Count | Description |
 |----------|-------|-------------|
-| **Tools** | 19 | Actions and queries with structured output |
+| **Tools** | 22 | Actions and queries with structured output |
 | **Resources** | 9 + 4 templates | Browsable data exposed to the AI |
 | **Prompts** | 6 | Pre-built guided workflows |
 | **Intelligence** | Built-in | Anomaly detection, suggestions, semantic search |
+| **Documentation** | Built-in | Live docs fetching, deprecation checks, syntax validation |
 
 ## Cutting-Edge MCP Features (v2.1)
 
@@ -130,6 +131,13 @@ All tools, resources, and prompts include a `title` field for display.
 | `get_suggestions` | Get Automation Suggestions | `readOnly`, `idempotent` |
 | `diagnose_entity` | Diagnose Entity | `readOnly`, `idempotent` |
 
+### Documentation
+| Tool | Title | Annotations |
+|------|-------|-------------|
+| `get_integration_docs` | Get Integration Documentation | `readOnly`, `idempotent` |
+| `get_breaking_changes` | Get Breaking Changes | `readOnly`, `idempotent` |
+| `check_config_syntax` | Check Configuration Syntax | `readOnly`, `idempotent` |
+
 ## Resources
 
 ### Static Resources
@@ -193,6 +201,14 @@ ha-mcp enable
 | `SUPERVISOR_TOKEN` | Auto-provided by Home Assistant add-on |
 
 ## Version History
+
+### v2.2.0 (Documentation Edition)
+- Added documentation tools for keeping configurations current
+- `get_integration_docs` - Fetch live documentation from Home Assistant website
+- `get_breaking_changes` - Check for breaking changes affecting your HA version
+- `check_config_syntax` - Validate YAML for deprecated patterns
+- Built-in deprecation pattern database for common issues
+- LLMs now guided to check docs before writing configuration
 
 ### v2.1.0 (Cutting Edge Edition)
 - Implemented MCP spec 2025-06-18 features

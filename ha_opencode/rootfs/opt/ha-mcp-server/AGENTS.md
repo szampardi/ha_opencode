@@ -227,6 +227,49 @@ Query and interact with the running Home Assistant instance:
 
 **Both approaches are valid and complementary.** Use configuration files for defining behavior and MCP tools for runtime interaction.
 
+## Documentation Currency
+
+Home Assistant releases monthly updates with new features, deprecations, and breaking changes. Your training data may be outdated. **Always verify configuration syntax against current documentation.**
+
+### Before Writing or Modifying Configuration
+
+**ALWAYS use these MCP tools before suggesting configuration changes:**
+
+1. **Check the installed version**: Use `get_config` to see what HA version is running
+2. **Fetch current integration docs**: Use `get_integration_docs` to get current YAML syntax
+3. **Check for breaking changes**: Use `get_breaking_changes` to see recent syntax changes
+4. **Validate your suggestion**: Use `check_config_syntax` to verify before presenting to user
+
+### Documentation Tools (MCP)
+
+| Tool | When to Use |
+|------|-------------|
+| `get_integration_docs` | Before writing ANY integration configuration |
+| `get_breaking_changes` | When user reports config stopped working after update |
+| `check_config_syntax` | Before presenting YAML suggestions to user |
+
+### Workflow Example
+
+When a user asks "Help me set up a template sensor":
+
+```
+1. get_config()                              -> Check HA version (e.g., 2024.12.1)
+2. get_integration_docs("template")          -> Get current syntax and examples
+3. Draft configuration using CURRENT syntax from docs
+4. check_config_syntax(yaml, "template")     -> Verify it's valid
+5. Present to user with confidence
+```
+
+### Common Deprecation Patterns
+
+Be especially careful with these frequently-changed areas:
+- **Template sensors/binary_sensors**: `platform: template` under `sensor:` is deprecated; use top-level `template:`
+- **Entity configurations**: Many moved from YAML to UI-based config
+- **Trigger-based templates**: Newer syntax preferred over legacy template sensors
+- **Device triggers**: Syntax evolves with new device types
+
+**When in doubt, fetch the docs. Never rely solely on training data for configuration syntax.**
+
 ## Common Tasks
 
 ### Creating an Automation

@@ -39,6 +39,37 @@ The `search_entities` tool understands natural language:
 - "motion sensors" finds binary_sensor.*motion*
 - "front door" finds relevant door sensors
 
+## Documentation Currency (CRITICAL)
+
+Your training data may be outdated. Home Assistant releases monthly updates with breaking changes.
+
+### ALWAYS Check Docs Before Writing Configuration
+Use the documentation tools proactively:
+
+| Tool | When to Use |
+|------|-------------|
+| `get_integration_docs` | **Before writing ANY integration config** |
+| `get_breaking_changes` | When config stopped working, or checking compatibility |
+| `check_config_syntax` | Before presenting YAML to user |
+
+### Common Deprecations to Watch For
+- **Template sensors**: `platform: template` under `sensor:` -> use top-level `template:`
+- **Entity namespace**: `entity_namespace:` is deprecated -> use `unique_id`
+- **Time/date sensors**: `platform: time_date` -> use template sensors
+- **White value**: `white_value` in lights -> use `white`
+
+### Workflow for Configuration Tasks
+```
+1. get_config()                    -> Know the HA version
+2. get_integration_docs("name")    -> Get CURRENT syntax  
+3. Write config using docs syntax  -> Not from memory!
+4. check_config_syntax(yaml)       -> Catch deprecations
+5. Show user and get approval
+6. validate_config()               -> Full HA check
+```
+
+**Never rely solely on training data for YAML syntax. Always verify with docs.**
+
 ## Guided Workflows (Prompts)
 
 Use these prompts for complex tasks:
@@ -56,6 +87,8 @@ Use these prompts for complex tasks:
 3. **Use history for debugging**: Use `get_history` when troubleshooting intermittent issues
 4. **Leverage relationships**: Use `get_entity_details` to find related entities
 5. **Be specific with services**: Always specify `entity_id` in the target for `call_service`
+6. **Verify syntax is current**: Use `get_integration_docs` before writing configuration
+7. **Check for deprecations**: Use `check_config_syntax` before presenting YAML to user
 
 ## Example Patterns
 
@@ -84,4 +117,23 @@ Use these prompts for complex tasks:
 2. get_services() to understand available services
 3. Write automation YAML
 4. validate_config()
+```
+
+### Write configuration for an integration (IMPORTANT!)
+```
+1. get_config()                              -> Check HA version
+2. get_integration_docs(integration="mqtt")  -> Get current syntax
+3. Draft configuration using CURRENT syntax from docs
+4. check_config_syntax(yaml_config, "mqtt")  -> Validate for deprecations
+5. Present to user
+6. validate_config()                         -> Full HA validation
+```
+
+### User reports "config stopped working after update"
+```
+1. get_config()                              -> Check current HA version
+2. get_breaking_changes(integration="...")   -> Check for relevant changes
+3. get_error_log(lines=100)                  -> Look for deprecation warnings
+4. Review their configuration
+5. Suggest updates based on breaking changes
 ```
