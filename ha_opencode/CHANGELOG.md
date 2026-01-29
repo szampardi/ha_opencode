@@ -1,6 +1,15 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## 1.1.2
+
+**Build Fix: Prevent Update Race Condition**
+
+- Fixed timing issue where updates appeared in Home Assistant before images were built
+- Workflow now triggers on tag push instead of release creation
+- Version in config.yaml is automatically updated after images are successfully pushed
+- GitHub release is created automatically after build completes
+
 ## 1.1.1
 
 **New Feature: Visual Firmware Update Monitoring**
