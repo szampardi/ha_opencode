@@ -1,6 +1,14 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## 1.1.4
+
+**Bug Fix: Update Tools Not Available**
+
+- Fixed critical bug where update management and ESPHome tools were defined in the wrong array
+- Tools `watch_firmware_update`, `get_available_updates`, `update_component`, `get_update_progress`, `get_running_jobs`, and ESPHome tools are now properly exposed
+- AI assistants can now use these tools for firmware and system updates
+
 ## 1.1.3
 
 **Documentation: Update Management Instructions**
