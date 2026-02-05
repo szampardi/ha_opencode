@@ -12,6 +12,11 @@ bashio::log.info "=============================================="
 mkdir -p /data/.local/share/opencode
 mkdir -p /data/.config/opencode
 
+# Set up persistent HOME for serve mode
+export HOME="/data"
+export XDG_DATA_HOME="/data/.local/share"
+export XDG_CONFIG_HOME="/data/.config"
+
 # ==============================================================================
 # Deploy AGENTS.md to Home Assistant config directory (first install only)
 # Users can customize this file using File Editor or any text editor
