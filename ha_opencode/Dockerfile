@@ -16,7 +16,7 @@ COPY	rootfs/opt/ha-lsp-server/package*.json /opt/ha-lsp-server/
 RUN	export DEBIAN_FRONTEND=noninteractive; \
 	apt-get update; \
 	apt-get dist-upgrade -yq; \
-	apt-get install -y --no-install-recommends byobu ca-certificates curl git jq nano nodejs npm; \
+	apt-get install -y --no-install-recommends automake build-essential byobu ca-certificates curl gcc git jq make nano nodejs npm openssh-client procps; \
 	apt-get clean; apt-get autoclean; rm -rf /var/lib/apt/lists/*; \
 	ARCH=$([ "$BUILD_ARCH" = "aarch64" ] && echo "aarch64" || echo "x86_64"); \
 	curl -fsSL "https://github.com/tsl0922/ttyd/releases/download/${TTYD_VERSION}/ttyd.${ARCH}" -o /usr/bin/ttyd; \
