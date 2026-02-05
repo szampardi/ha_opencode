@@ -31,10 +31,13 @@ COPY	rootfs	/
 
 WORKDIR /homeassistant
 HEALTHCHECK    --interval=30s --timeout=10s --start-period=5s --retries=3 CMD pgrep opencode > /dev/null || exit 1
+
 ENV	NODE_OPTIONS="--max-old-space-size=512" \
 	HOME=/data \
 	XDG_DATA_HOME=/data/.local/share \
 	XDG_CONFIG_HOME=/data/.config
+
+VOLUME	/data
 
 LABEL \
     io.hass.name="HA OpenCode" \
