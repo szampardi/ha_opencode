@@ -31,10 +31,10 @@ MCP_ENABLED=$(bashio::config 'mcp_enabled')
 LSP_ENABLED=$(bashio::config 'lsp_enabled' || echo "true")
 SERVE_PRINT_LOGS=$(bashio::config 'serve_print_logs' || echo "true")
 SERVE_LOG_LEVEL=$(bashio::config 'serve_log_level' || echo "DEBUG")
-SERVE_PORT=$(bashio::config 'serve_port' || echo "4096")
 SERVE_HOSTNAME=$(bashio::config 'serve_hostname' || echo "0.0.0.0")
 SERVE_MDNS=$(bashio::config 'serve_mdns' || echo "false")
 OPTIONS_FILE="/data/options.json"
+SERVE_PORT=4096
 
 bashio::log.info "Configuration: MCP=${MCP_ENABLED} LSP=${LSP_ENABLED}"
 

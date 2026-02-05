@@ -1,7 +1,7 @@
 ---
 name: "HA OpenCode"
 description: "AI coding agent for editing Home Assistant configuration with deep MCP integration and LSP support"
-version: "2.0.4"
+version: "2.0.5"
 slug: "ha_opencode"
 image: "docker.io/nexus166/ha_opencode"
 url: "https://github.com/szampardi/ha_opencode"
@@ -51,10 +51,9 @@ options:
   # OpenCode serve options
   serve_print_logs: true
   serve_log_level: "DEBUG"
-  serve_port: 4096
   serve_hostname: "0.0.0.0"
   serve_mdns: false
-  serve_cors: ""
+  serve_cors: []
 
 schema:
   # Feature toggles
@@ -62,15 +61,14 @@ schema:
   lsp_enabled: bool
 
   # OpenCode config (raw JSON string)
-  opencode_config: str?
+  opencode_config: str(0,32768)?
 
   # OpenCode serve options
   serve_print_logs: bool
   serve_log_level: list(DEBUG|INFO|WARN|ERROR)
-  serve_port: int(1,65535)
   serve_hostname: str
   serve_mdns: bool
-  serve_cors: str
+  serve_cors: list(str)
 
 # Exclude caches from backups
 backup_exclude:
