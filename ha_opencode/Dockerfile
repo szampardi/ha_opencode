@@ -4,7 +4,6 @@ FROM	${BUILD_FROM}
 
 ARG	BUILD_VERSION=2.0.1
 ARG	BUILD_ARCH=x86_64
-ARG	TTYD_VERSION=1.7.7
 ARG	OPENCODE_VERSION=latest
 
 ENV	NODE_ENV=production npm_config_update_notifier=false npm_config_fund=false
@@ -18,9 +17,6 @@ RUN	export DEBIAN_FRONTEND=noninteractive; \
 	apt-get dist-upgrade -yq; \
 	apt-get install -y --no-install-recommends automake build-essential byobu ca-certificates curl gcc git jq make nano nodejs npm openssh-client procps; \
 	apt-get clean; apt-get autoclean; rm -rf /var/lib/apt/lists/*; \
-	ARCH=$([ "$BUILD_ARCH" = "aarch64" ] && echo "aarch64" || echo "x86_64"); \
-	curl -fsSL "https://github.com/tsl0922/ttyd/releases/download/${TTYD_VERSION}/ttyd.${ARCH}" -o /usr/bin/ttyd; \
-	chmod +x /usr/bin/ttyd; \
 	npm install -g opencode-ai@${OPENCODE_VERSION}; \
 	npm cache clean --force; \
 	cd /opt/ha-mcp-server && npm install --omit=dev; \
@@ -29,7 +25,7 @@ RUN	export DEBIAN_FRONTEND=noninteractive; \
 	mkdir -vp /data/.local/share/opencode /data/.config/opencode
 
 COPY	rootfs	/
-COPY	--from=go /usr/local/go /usr/local/
+COPY	--from=go /usr/local/go /usr/local/go
 ENV	GOPATH=/opt/go GOROOT=/usr/local/go PATH="/usr/local/go/bin:/opt/go/bin:${PATH}"
 
 WORKDIR /homeassistant

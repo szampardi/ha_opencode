@@ -26,7 +26,6 @@ retain their respective licenses.
 
 | Component | License | Source |
 |-----------|---------|--------|
-| ttyd | MIT | https://github.com/tsl0922/ttyd |
 | OpenCode | MIT | https://github.com/opencode-ai/opencode |
 | Node.js | MIT | https://github.com/nodejs/node |
 

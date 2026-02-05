@@ -11,13 +11,6 @@ arch:
 startup: application
 init: false
 
-# Ingress configuration
-ingress: true
-ingress_port: 8099
-ingress_stream: true
-panel_icon: mdi:robot
-panel_title: HA OpenCode
-
 # Direct access port (optional)
 ports:
   4096/tcp: 4096

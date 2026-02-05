@@ -42,21 +42,9 @@ fi
 export NODE_OPTIONS="--max-old-space-size=256"
 
 if command -v bashio &> /dev/null; then
-    bashio::log.info "Starting ttyd on port 8099..."
+    bashio::log.info "Starting OpenCode server on port 4096..."
 else
-    echo "[INFO] Starting ttyd on port 8099..."
+    echo "[INFO] Starting OpenCode server on port 4096..."
 fi
 
-# Start ttyd with OpenCode session wrapper
-# -W: Writable (allow input)
-# -p: Port for ingress
-# -t: Terminal options
-# Using Catppuccin Mocha theme for modern look
-exec ttyd \
-    -W \
-    -p 8099 \
-    -t fontSize=14 \
-    -t fontFamily="'JetBrains Mono', 'Fira Code', 'SF Mono', Menlo, Consolas, monospace" \
-    -t cursorBlink=true \
-    -t 'theme={"background":"#1e1e2e","foreground":"#cdd6f4","cursor":"#f5e0dc","cursorAccent":"#1e1e2e","selectionBackground":"#585b70","selectionForeground":"#cdd6f4","black":"#45475a","red":"#f38ba8","green":"#a6e3a1","yellow":"#f9e2af","blue":"#89b4fa","magenta":"#f5c2e7","cyan":"#94e2d5","white":"#bac2de","brightBlack":"#585b70","brightRed":"#f38ba8","brightGreen":"#a6e3a1","brightYellow":"#f9e2af","brightBlue":"#89b4fa","brightMagenta":"#f5c2e7","brightCyan":"#94e2d5","brightWhite":"#a6adc8"}' \
-    /usr/local/bin/opencode-session.sh
+exec opencode serve --hostname 0.0.0.0 --port 4096
