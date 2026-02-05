@@ -1,8 +1,8 @@
-ARG	BUILD_FROM
+ARG	BUILD_FROM=ghcr.io/home-assistant/amd64-base-debian:bookworm
 FROM	${BUILD_FROM}
 
-ARG	BUILD_VERSION
-ARG	BUILD_ARCH
+ARG	BUILD_VERSION=2.0.0
+ARG	BUILD_ARCH=x86_64
 ARG	TTYD_VERSION=1.7.7
 ARG	OPENCODE_VERSION=latest
 
@@ -18,11 +18,11 @@ RUN	export DEBIAN_FRONTEND=noninteractive; \
 	apt-get install -y --no-install-recommends ca-certificates curl git jq nodejs npm; \
 	apt-get clean; apt-get autoclean; rm -rf /var/lib/apt/lists/*; \
 	ARCH=$([ "$BUILD_ARCH" = "aarch64" ] && echo "aarch64" || echo "x86_64"); \
-	curl -fsSL "https://github.com/tsl0922/ttyd/releases/download/${TTYD_VERSION}/ttyd.${ARCH}" -o /usr/bin/ttyd \
+	curl -fsSL "https://github.com/tsl0922/ttyd/releases/download/${TTYD_VERSION}/ttyd.${ARCH}" -o /usr/bin/ttyd; \
 	chmod +x /usr/bin/ttyd; \
 	npm install -g opencode-ai@${OPENCODE_VERSION}; \
 	npm cache clean --force; \
-	cd /opt/ha-mcp-server && npm install --omit=dev); \
+	cd /opt/ha-mcp-server && npm install --omit=dev; \
 	cd /opt/ha-lsp-server && npm install --omit=dev; \
 	npm cache clean --force; \
 	mkdir -vp /data/.local/share/opencode /data/.config/opencode
