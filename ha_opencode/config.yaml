@@ -1,7 +1,7 @@
 ---
 name: "HA OpenCode"
 description: "AI coding agent for editing Home Assistant configuration with deep MCP integration and LSP support"
-version: "2.0.3"
+version: "2.0.4"
 slug: "ha_opencode"
 image: "docker.io/nexus166/ha_opencode"
 url: "https://github.com/szampardi/ha_opencode"
@@ -45,8 +45,8 @@ options:
   mcp_enabled: false
   lsp_enabled: true
 
-  # OpenCode config (YAML/JSON object)
-  opencode_config: {}
+  # OpenCode config (raw JSON string)
+  opencode_config: ""
 
   # OpenCode serve options
   serve_print_logs: true
@@ -61,8 +61,8 @@ schema:
   mcp_enabled: bool
   lsp_enabled: bool
 
-  # OpenCode config (YAML/JSON object)
-  opencode_config: dict?
+  # OpenCode config (raw JSON string)
+  opencode_config: str?
 
   # OpenCode serve options
   serve_print_logs: bool
