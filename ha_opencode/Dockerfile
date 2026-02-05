@@ -1,4 +1,5 @@
 ARG	BUILD_FROM=ghcr.io/home-assistant/amd64-base-debian:bookworm
+FROM	golang:latest AS go
 FROM	${BUILD_FROM}
 
 ARG	BUILD_VERSION=2.0.1
@@ -15,7 +16,7 @@ COPY	rootfs/opt/ha-lsp-server/package*.json /opt/ha-lsp-server/
 RUN	export DEBIAN_FRONTEND=noninteractive; \
 	apt-get update; \
 	apt-get dist-upgrade -yq; \
-	apt-get install -y --no-install-recommends ca-certificates curl git jq nodejs npm; \
+	apt-get install -y --no-install-recommends byobu ca-certificates curl git jq nano nodejs npm; \
 	apt-get clean; apt-get autoclean; rm -rf /var/lib/apt/lists/*; \
 	ARCH=$([ "$BUILD_ARCH" = "aarch64" ] && echo "aarch64" || echo "x86_64"); \
 	curl -fsSL "https://github.com/tsl0922/ttyd/releases/download/${TTYD_VERSION}/ttyd.${ARCH}" -o /usr/bin/ttyd; \
@@ -28,6 +29,8 @@ RUN	export DEBIAN_FRONTEND=noninteractive; \
 	mkdir -vp /data/.local/share/opencode /data/.config/opencode
 
 COPY	rootfs	/
+COPY	--from=go /usr/local/go /usr/local/
+ENV	GOPATH=/opt/go GOROOT=/usr/local/go PATH="/usr/local/go/bin:/opt/go/bin:${PATH}"
 
 WORKDIR /homeassistant
 HEALTHCHECK    --interval=30s --timeout=10s --start-period=5s --retries=3 CMD pgrep opencode > /dev/null || exit 1
