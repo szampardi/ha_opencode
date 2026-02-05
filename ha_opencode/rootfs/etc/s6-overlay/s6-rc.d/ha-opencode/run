@@ -29,6 +29,14 @@ fi
 
 MCP_ENABLED=$(bashio::config 'mcp_enabled')
 LSP_ENABLED=$(bashio::config 'lsp_enabled' || echo "true")
+OPENCODE_CONFIG_JSON=$(bashio::config 'opencode_config_json' || echo "")
+SERVE_PRINT_LOGS=$(bashio::config 'serve_print_logs' || echo "true")
+SERVE_LOG_LEVEL=$(bashio::config 'serve_log_level' || echo "DEBUG")
+SERVE_PORT=$(bashio::config 'serve_port' || echo "4096")
+SERVE_HOSTNAME=$(bashio::config 'serve_hostname' || echo "0.0.0.0")
+SERVE_MDNS=$(bashio::config 'serve_mdns' || echo "false")
+SERVE_CORS_RAW=$(bashio::config 'serve_cors' || echo "[]")
+
 bashio::log.info "Configuration: MCP=${MCP_ENABLED} LSP=${LSP_ENABLED}"
 
 # ==============================================================================
@@ -44,13 +52,47 @@ jq --argjson mcp "${MCP_BOOL}" --argjson lsp_disabled "${LSP_DISABLED}" '
 ' /opt/ha-mcp-server/opencode-ha.json > /data/.config/opencode/opencode.json
 
 # ==============================================================================
+# Inject OpenCode config.json (optional)
+# ==============================================================================
+
+if [ -n "${OPENCODE_CONFIG_JSON}" ] && [ "${OPENCODE_CONFIG_JSON}" != "null" ]; then
+    if ! printf '%s' "${OPENCODE_CONFIG_JSON}" | jq -e . >/dev/null 2>&1; then
+        bashio::log.error "Invalid JSON in opencode_config_json"
+        exit 1
+    fi
+
+    printf '%s' "${OPENCODE_CONFIG_JSON}" > /data/.config/opencode/config.json
+    bashio::log.info "Wrote /data/.config/opencode/config.json from add-on config"
+fi
+
+# ==============================================================================
 # Set Node.js memory limit (hardcoded for stability)
 # ==============================================================================
 
-bashio::log.info "Starting OpenCode web UI on port 4096..."
+bashio::log.info "Starting OpenCode web UI on port ${SERVE_PORT}..."
 
 # ==============================================================================
 # Start OpenCode web UI (serve mode)
 # ==============================================================================
 
-exec opencode serve --host 0.0.0.0 --port 4096
+SERVE_ARGS=(serve --hostname "${SERVE_HOSTNAME}" --port "${SERVE_PORT}" --log-level "${SERVE_LOG_LEVEL}")
+
+if [ "${SERVE_PRINT_LOGS}" = "true" ]; then
+    SERVE_ARGS+=(--print-logs)
+fi
+
+if [ "${SERVE_MDNS}" = "true" ]; then
+    SERVE_ARGS+=(--mdns)
+fi
+
+if printf '%s' "${SERVE_CORS_RAW}" | jq -e . >/dev/null 2>&1; then
+    mapfile -t SERVE_CORS_VALUES < <(printf '%s' "${SERVE_CORS_RAW}" | jq -r '.[]')
+    for cors_value in "${SERVE_CORS_VALUES[@]}"; do
+        SERVE_ARGS+=(--cors "${cors_value}")
+    done
+else
+    bashio::log.error "Invalid serve_cors value; expected a list of strings"
+    exit 1
+fi
+
+exec opencode "${SERVE_ARGS[@]}"
