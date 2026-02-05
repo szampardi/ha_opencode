@@ -3,7 +3,7 @@ name: "HA OpenCode"
 description: "AI coding agent for editing Home Assistant configuration with deep MCP integration and LSP support"
 version: "2.0.0"
 slug: "ha_opencode"
-image: "docker.io/nexus166/ha_opencode:{arch}"
+image: "docker.io/nexus166/ha_opencode"
 url: "https://github.com/szampardi/ha_opencode"
 arch:
   - aarch64
