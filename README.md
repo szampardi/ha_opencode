@@ -80,7 +80,7 @@ changes, please:
    Or manually add the repository URL:
 
    ```text
-   https://github.com/magnusoverli/ha_opencode
+   https://github.com/szampardi/ha_opencode
    ```
 
 2. Find **"HA OpenCode"** in the app store and click **Install**.
@@ -111,7 +111,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Authors & contributors
 
-The original setup of this repository is by [Magnus Overli][magnusoverli].
+The original setup of this repository is by [Magnus Overli][@magnusoverli].
 
 For a full list of all authors and contributors,
 check [the contributor's page][contributors].
@@ -126,21 +126,21 @@ See [THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md) for details.
 
 [aarch64-shield]: https://img.shields.io/badge/aarch64-yes-green.svg
 [amd64-shield]: https://img.shields.io/badge/amd64-yes-green.svg
-[commits-shield]: https://img.shields.io/github/commit-activity/y/magnusoverli/ha_opencode.svg
-[commits]: https://github.com/magnusoverli/ha_opencode/commits/main
-[contributors]: https://github.com/magnusoverli/ha_opencode/graphs/contributors
+[commits-shield]: https://img.shields.io/github/commit-activity/y/szampardi/ha_opencode.svg
+[commits]: https://github.com/szampardi/ha_opencode/commits/main
+[contributors]: https://github.com/szampardi/ha_opencode/graphs/contributors
 [docs]: ./ha_opencode/DOCS.md
-[issues]: https://github.com/magnusoverli/ha_opencode/issues
+[issues]: https://github.com/szampardi/ha_opencode/issues
 [license]: UNLICENSE
 [license-shield]: https://img.shields.io/badge/license-Unlicense-blue.svg
 [third-party]: THIRD-PARTY-LICENSES.md
 [third-party-shield]: https://img.shields.io/badge/third--party-licenses-lightgrey.svg
-[magnusoverli]: https://github.com/magnusoverli
+[szampardi]: https://github.com/szampardi
 [maintenance-shield]: https://img.shields.io/maintenance/yes/2026.svg
 [opencode-discord]: https://opencode.ai/discord
 [opencode-docs]: https://opencode.ai/docs
 [project-stage-shield]: https://img.shields.io/badge/project%20stage-experimental-orange.svg
-[releases]: https://github.com/magnusoverli/ha_opencode/releases
-[releases-shield]: https://img.shields.io/github/release/magnusoverli/ha_opencode.svg
-[repo-add]: https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fmagnusoverli%2Fha_opencode
+[releases]: https://github.com/szampardi/ha_opencode/releases
+[releases-shield]: https://img.shields.io/github/release/szampardi/ha_opencode.svg
+[repo-add]: https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fszampardi%2Fha_opencode
 [repo-btn]: https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg

@@ -729,7 +729,7 @@ After modifying configuration files, you may need to:
 
 - [OpenCode Documentation](https://opencode.ai/docs)
 - [OpenCode Discord](https://opencode.ai/discord)
-- [GitHub Issues](https://github.com/magnusoverli/ha_opencode/issues)
+- [GitHub Issues](https://github.com/szampardi/ha_opencode/issues)
 
 ## License
 
