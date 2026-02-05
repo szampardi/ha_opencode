@@ -29,13 +29,12 @@ fi
 
 MCP_ENABLED=$(bashio::config 'mcp_enabled')
 LSP_ENABLED=$(bashio::config 'lsp_enabled' || echo "true")
-OPENCODE_CONFIG_JSON=$(bashio::config 'opencode_config_json' || echo "")
 SERVE_PRINT_LOGS=$(bashio::config 'serve_print_logs' || echo "true")
 SERVE_LOG_LEVEL=$(bashio::config 'serve_log_level' || echo "DEBUG")
 SERVE_PORT=$(bashio::config 'serve_port' || echo "4096")
 SERVE_HOSTNAME=$(bashio::config 'serve_hostname' || echo "0.0.0.0")
 SERVE_MDNS=$(bashio::config 'serve_mdns' || echo "false")
-SERVE_CORS_RAW=$(bashio::config 'serve_cors' || echo "[]")
+OPTIONS_FILE="/data/options.json"
 
 bashio::log.info "Configuration: MCP=${MCP_ENABLED} LSP=${LSP_ENABLED}"
 
@@ -55,14 +54,38 @@ jq --argjson mcp "${MCP_BOOL}" --argjson lsp_disabled "${LSP_DISABLED}" '
 # Inject OpenCode config.json (optional)
 # ==============================================================================
 
-if [ -n "${OPENCODE_CONFIG_JSON}" ] && [ "${OPENCODE_CONFIG_JSON}" != "null" ]; then
-    if ! printf '%s' "${OPENCODE_CONFIG_JSON}" | jq -e . >/dev/null 2>&1; then
-        bashio::log.error "Invalid JSON in opencode_config_json"
-        exit 1
-    fi
+if [ -f "${OPTIONS_FILE}" ]; then
+    OPENCODE_CONFIG_TYPE=$(jq -r 'if .opencode_config==null then "null" else (.opencode_config|type) end' "${OPTIONS_FILE}")
+    case "${OPENCODE_CONFIG_TYPE}" in
+        object)
+            if jq -e '.opencode_config | length > 0' "${OPTIONS_FILE}" >/dev/null 2>&1; then
+                OPENCODE_CONFIG_JSON=$(jq -c '.opencode_config' "${OPTIONS_FILE}")
+            fi
+            ;;
+        string)
+            OPENCODE_CONFIG_JSON=$(jq -r '.opencode_config' "${OPTIONS_FILE}")
+            if [ -n "${OPENCODE_CONFIG_JSON}" ]; then
+                if ! printf '%s' "${OPENCODE_CONFIG_JSON}" | jq -e . >/dev/null 2>&1; then
+                    bashio::log.error "Invalid JSON in opencode_config"
+                    exit 1
+                fi
+            else
+                OPENCODE_CONFIG_JSON=""
+            fi
+            ;;
+        null)
+            OPENCODE_CONFIG_JSON=""
+            ;;
+        *)
+            bashio::log.error "Invalid type for opencode_config; expected object"
+            exit 1
+            ;;
+    esac
 
-    printf '%s' "${OPENCODE_CONFIG_JSON}" > /data/.config/opencode/config.json
-    bashio::log.info "Wrote /data/.config/opencode/config.json from add-on config"
+    if [ -n "${OPENCODE_CONFIG_JSON}" ]; then
+        printf '%s' "${OPENCODE_CONFIG_JSON}" > /data/.config/opencode/config.json
+        bashio::log.info "Wrote /data/.config/opencode/config.json from add-on config"
+    fi
 fi
 
 # ==============================================================================
@@ -85,14 +108,27 @@ if [ "${SERVE_MDNS}" = "true" ]; then
     SERVE_ARGS+=(--mdns)
 fi
 
-if printf '%s' "${SERVE_CORS_RAW}" | jq -e . >/dev/null 2>&1; then
-    mapfile -t SERVE_CORS_VALUES < <(printf '%s' "${SERVE_CORS_RAW}" | jq -r '.[]')
+if [ -f "${OPTIONS_FILE}" ]; then
+    SERVE_CORS_TYPE=$(jq -r 'if .serve_cors==null then "null" else (.serve_cors|type) end' "${OPTIONS_FILE}")
+    case "${SERVE_CORS_TYPE}" in
+        array)
+            mapfile -t SERVE_CORS_VALUES < <(jq -r '.serve_cors[] | select(length>0)' "${OPTIONS_FILE}")
+            ;;
+        string)
+            mapfile -t SERVE_CORS_VALUES < <(jq -r '.serve_cors | split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length>0))[]' "${OPTIONS_FILE}")
+            ;;
+        null)
+            SERVE_CORS_VALUES=()
+            ;;
+        *)
+            bashio::log.error "Invalid serve_cors value; expected a list or comma-separated string"
+            exit 1
+            ;;
+    esac
+
     for cors_value in "${SERVE_CORS_VALUES[@]}"; do
         SERVE_ARGS+=(--cors "${cors_value}")
     done
-else
-    bashio::log.error "Invalid serve_cors value; expected a list of strings"
-    exit 1
 fi
 
 exec opencode "${SERVE_ARGS[@]}"
