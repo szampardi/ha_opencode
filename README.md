@@ -85,8 +85,10 @@ changes, please:
 
 2. Find **"HA OpenCode"** in the app store and click **Install**.
 
-3. Start the app and click **Open Web UI** (or use the sidebar).
-   - Direct access (no ingress): `http://<home-assistant-host>:4096`
+3. Start the app and click **Open Web UI** for the browser interface.
+   - Sidebar ingress opens the terminal session.
+   - Direct access (web UI, no ingress): `http://<home-assistant-host>:4096`
+   - Optional: set **OpenCode Server Password** in the app config to require basic auth (username `opencode`).
 
 4. Use `/connect` in the OpenCode UI to configure your AI provider.
 

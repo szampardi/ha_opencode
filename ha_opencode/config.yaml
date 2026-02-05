@@ -13,7 +13,7 @@ init: false
 
 # Ingress configuration
 ingress: true
-ingress_port: 4096
+ingress_port: 8099
 ingress_stream: true
 panel_icon: mdi:robot
 panel_title: HA OpenCode
@@ -51,6 +51,7 @@ options:
   serve_hostname: "0.0.0.0"
   serve_mdns: false
   serve_cors: ""
+  opencode_server_password: ""
 
 schema:
   # Feature toggles
@@ -66,6 +67,7 @@ schema:
   serve_hostname: str
   serve_mdns: bool
   serve_cors: str?
+  opencode_server_password: str?
 
 # Exclude caches from backups
 backup_exclude:

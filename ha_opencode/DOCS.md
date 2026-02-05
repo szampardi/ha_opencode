@@ -7,7 +7,7 @@ HA OpenCode is an AI-powered coding agent that helps you edit and manage your Ho
 - **AI-Powered Editing**: Use natural language to modify your Home Assistant configuration
 - **OpenCode Web UI**: Browser-native OpenCode interface
 - **Log Access**: View Home Assistant Core, Supervisor, and host logs
-- **Ingress Support**: Access directly from the Home Assistant sidebar
+- **Ingress Support**: Terminal access from the Home Assistant sidebar
 - **Provider Agnostic**: Works with Anthropic, OpenAI, Google, and 70+ other AI providers
 - **MCP Integration**: Deep Home Assistant integration with Tools, Resources, Prompts, and Intelligence
 - **LSP Integration**: Intelligent YAML editing with entity autocomplete, hover info, and diagnostics
@@ -22,14 +22,15 @@ Configure the app from the **Configuration** tab in the app page.
 |--------|---------|-------------|
 | **Enable MCP Home Assistant Integration** | `false` | Enable the Model Context Protocol (MCP) server for deep Home Assistant integration. Includes 19 tools, 9 resources, 6 guided prompts, and an intelligence layer for anomaly detection and automation suggestions. |
 | **Enable LSP Home Assistant Integration** | `true` | Enable the Language Server Protocol (LSP) server for intelligent YAML editing. Provides entity/service autocomplete, hover documentation, diagnostics for unknown entities, and go-to-definition for !include tags. |
+| **OpenCode Server Password** | `` | Enable HTTP basic auth for the direct web UI (username defaults to `opencode`). |
 
 ## Getting Started
 
 ### 1. Open the App
 
-Click on **HA OpenCode** in the Home Assistant sidebar to open the web UI.
+Click on **HA OpenCode** in the Home Assistant sidebar to open the terminal session.
 
-Direct access (no ingress): `http://<home-assistant-host>:4096`
+Direct access (web UI, no ingress): `http://<home-assistant-host>:4096`
 
 ### 2. Configure Your AI Provider
 

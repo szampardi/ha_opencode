@@ -33,10 +33,22 @@ SERVE_PRINT_LOGS=$(bashio::config 'serve_print_logs' || echo "true")
 SERVE_LOG_LEVEL=$(bashio::config 'serve_log_level' || echo "DEBUG")
 SERVE_HOSTNAME=$(bashio::config 'serve_hostname' || echo "0.0.0.0")
 SERVE_MDNS=$(bashio::config 'serve_mdns' || echo "false")
+OPENCODE_SERVER_PASSWORD=$(bashio::config 'opencode_server_password' || echo "")
 OPTIONS_FILE="/data/options.json"
 SERVE_PORT=4096
+TTYD_PORT=8099
 
 bashio::log.info "Configuration: MCP=${MCP_ENABLED} LSP=${LSP_ENABLED}"
+
+if [ "${OPENCODE_SERVER_PASSWORD}" = "null" ]; then
+    OPENCODE_SERVER_PASSWORD=""
+fi
+
+if [ -n "${OPENCODE_SERVER_PASSWORD}" ]; then
+    export OPENCODE_SERVER_PASSWORD="${OPENCODE_SERVER_PASSWORD}"
+else
+    unset OPENCODE_SERVER_PASSWORD
+fi
 
 # ==============================================================================
 # Apply configuration in single jq operation
@@ -71,10 +83,11 @@ fi
 # Set Node.js memory limit (hardcoded for stability)
 # ==============================================================================
 
-bashio::log.info "Starting OpenCode web UI on port ${SERVE_PORT}..."
+bashio::log.info "Starting OpenCode server on port ${SERVE_PORT}..."
+bashio::log.info "Starting ttyd ingress on port ${TTYD_PORT}..."
 
 # ==============================================================================
-# Start OpenCode web UI (serve mode)
+# Start OpenCode server and ttyd ingress
 # ==============================================================================
 
 SERVE_ARGS=(serve --hostname "${SERVE_HOSTNAME}" --port "${SERVE_PORT}" --log-level "${SERVE_LOG_LEVEL}")
@@ -110,4 +123,20 @@ if [ -f "${OPTIONS_FILE}" ]; then
     done
 fi
 
-exec opencode "${SERVE_ARGS[@]}"
+opencode "${SERVE_ARGS[@]}" &
+OPENCODE_PID=$!
+
+ttyd \
+    -W \
+    -p "${TTYD_PORT}" \
+    -t fontSize=14 \
+    -t cursorBlink=true \
+    -t 'theme={"background":"#1e1e2e","foreground":"#cdd6f4","cursor":"#f5e0dc","cursorAccent":"#1e1e2e","selectionBackground":"#585b70","selectionForeground":"#cdd6f4","black":"#45475a","red":"#f38ba8","green":"#a6e3a1","yellow":"#f9e2af","blue":"#89b4fa","magenta":"#f5c2e7","cyan":"#94e2d5","white":"#bac2de","brightBlack":"#585b70","brightRed":"#f38ba8","brightGreen":"#a6e3a1","brightYellow":"#f9e2af","brightBlue":"#89b4fa","brightMagenta":"#f5c2e7","brightCyan":"#94e2d5","brightWhite":"#a6adc8"}' \
+    /usr/local/bin/opencode-session.sh &
+TTYD_PID=$!
+
+wait -n "${OPENCODE_PID}" "${TTYD_PID}"
+STATUS=$?
+kill -TERM "${OPENCODE_PID}" "${TTYD_PID}" 2>/dev/null || true
+wait "${OPENCODE_PID}" "${TTYD_PID}" 2>/dev/null || true
+exit "${STATUS}"
