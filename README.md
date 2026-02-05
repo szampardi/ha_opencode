@@ -24,8 +24,8 @@ through MCP (Model Context Protocol).
 
 - **AI-Powered Editing** — Use natural language to modify your Home Assistant
   configuration
-- **Modern Web Terminal** — Beautiful terminal with 10 theme options, accessible
-  from the HA sidebar
+- **OpenCode Web UI** — Browser-native OpenCode interface, accessible from the
+  HA sidebar
 - **Provider Agnostic** — Works with Anthropic, OpenAI, Google, and 70+ other
   AI providers
 - **MCP Integration** — 22 tools, 9 resources, and 6 guided prompts for deep HA
@@ -86,8 +86,9 @@ changes, please:
 2. Find **"HA OpenCode"** in the app store and click **Install**.
 
 3. Start the app and click **Open Web UI** (or use the sidebar).
+   - Direct access (no ingress): `http://<home-assistant-host>:4096`
 
-4. Run `opencode` and use `/connect` to configure your AI provider.
+4. Use `/connect` in the OpenCode UI to configure your AI provider.
 
 [:books: Read the full app documentation][docs]
 

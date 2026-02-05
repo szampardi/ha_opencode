@@ -5,7 +5,7 @@ HA OpenCode is an AI-powered coding agent that helps you edit and manage your Ho
 ## Features
 
 - **AI-Powered Editing**: Use natural language to modify your Home Assistant configuration
-- **Modern Terminal**: Beautiful web-based terminal with 10 theme options
+- **OpenCode Web UI**: Browser-native OpenCode interface
 - **Log Access**: View Home Assistant Core, Supervisor, and host logs
 - **Ingress Support**: Access directly from the Home Assistant sidebar
 - **Provider Agnostic**: Works with Anthropic, OpenAI, Google, and 70+ other AI providers
@@ -23,43 +23,17 @@ Configure the app from the **Configuration** tab in the app page.
 | **Enable MCP Home Assistant Integration** | `false` | Enable the Model Context Protocol (MCP) server for deep Home Assistant integration. Includes 19 tools, 9 resources, 6 guided prompts, and an intelligence layer for anomaly detection and automation suggestions. |
 | **Enable LSP Home Assistant Integration** | `true` | Enable the Language Server Protocol (LSP) server for intelligent YAML editing. Provides entity/service autocomplete, hover documentation, diagnostics for unknown entities, and go-to-definition for !include tags. |
 
-### Terminal Appearance
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| **Terminal Theme** | `breeze` | Color scheme for the terminal. Options: `breeze`, `catppuccin_mocha`, `catppuccin_latte`, `dracula`, `nord`, `tokyo_night`, `one_dark`, `solarized_dark`, `solarized_light`, `gruvbox_dark` |
-| **Font Size** | `14` | Terminal font size in pixels (10-24) |
-| **Cursor Style** | `block` | Cursor appearance: `block`, `underline`, or `bar` |
-| **Blinking Cursor** | `false` | Whether the cursor should blink |
-
-### Theme Previews
-
-- **Breeze** - KDE Konsole default, clean and professional
-- **Catppuccin Mocha** - Soothing pastel dark theme
-- **Catppuccin Latte** - Light pastel theme for bright environments
-- **Dracula** - Popular dark theme with vibrant colors
-- **Nord** - Arctic, bluish color palette
-- **Tokyo Night** - Dark theme inspired by Tokyo city lights
-- **One Dark** - Atom editor's iconic dark theme
-- **Solarized Dark** - Precision colors for dark backgrounds
-- **Solarized Light** - Precision colors for light backgrounds
-- **Gruvbox Dark** - Retro groove color scheme
-
 ## Getting Started
 
 ### 1. Open the App
 
-Click on **HA OpenCode** in the Home Assistant sidebar to open the terminal.
+Click on **HA OpenCode** in the Home Assistant sidebar to open the web UI.
+
+Direct access (no ingress): `http://<home-assistant-host>:4096`
 
 ### 2. Configure Your AI Provider
 
-OpenCode needs an AI provider to function. Run the following command inside OpenCode:
-
-```
-opencode
-```
-
-Then use the `/connect` command to add your AI provider:
+OpenCode needs an AI provider to function. Use the `/connect` command to add your AI provider:
 
 ```
 /connect
